@@ -1,4 +1,6 @@
 <div align="center">
+  <img src="assets/banner-pin-ball.png" width="100%" alt="PIN BALL - Game Banner">
+</div>
 
 # 🎮 PIN BALL
 
