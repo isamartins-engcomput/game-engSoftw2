@@ -1,0 +1,12 @@
+JOGO PIN BALL
+Grupo: Isadora Martins, Pedro Sperandio, Gustavo Bossolan e Bruno Felix
+Gênero: Estilo PIN BALL e Rise Up
+PITCH
+Conceito: Bolinha caindo, objetivo não deixar ela cair
+Público-Alvo: Crianças e idosos com tempo livre
+Mecânica: Bolinha pinga e rebate nas paredes
+Mapa de níveis (fases): Pode ir diminuindo a área livre da tela
+Principais desafios: Não deixar a bolinha relar na lava, se conseguir sobe pra cima no próximo desafio (novo mapa)
+Final: Game Over - Deixar a bolinha cair na lava, Vitória - Passar de 5 níveis seguidos
+StoryBoard: Bolinha pode ser algo repelente a lava, e ela precisa da ajuda do jogador para não ser destruída
+LINGUAGEM: Python
