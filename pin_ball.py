@@ -14,7 +14,7 @@ VELOCIDADE_HORIZONTAL_MAXIMA = 320
 
 FREIO_HORIZONTAL = 0.85
 IMPULSO_VERTICAL = 620
-IMPULSO_PROTECAO_FRAMES = 7
+INTERVALO_IMPULSO_FRAMES = 7
 
 TEMPO_RASTRO = 0.32
 DISTANCIA_PONTO_RASTRO = 2.0
@@ -450,7 +450,6 @@ def main():
     try:
         pygame.mixer.init()
         pygame.mixer.music.load(caminho_musica)
-        pygame.mixer.music.set_volume(0.35)
         pygame.mixer.music.play(-1)
     except (pygame.error, FileNotFoundError) as erro:
         print(f"Nao foi possivel carregar a musica: {erro}")
@@ -477,7 +476,7 @@ def main():
         game_over_img = pygame.image.load(caminho_game_over).convert()
         game_over_img = pygame.transform.scale(game_over_img, (WIDTH, HEIGHT))
     except (pygame.error, FileNotFoundError):
-        print("Aviso: game_over.jpeg nao encontrado; usando o fundo do jogo.")
+        print("Aviso: game_over.png nao encontrado; usando o fundo do jogo.")
         game_over_img = bg_image
 
     try:
@@ -541,10 +540,31 @@ def main():
         fonte_titulo = pygame.font.Font(caminho_fonte, 42)
         fonte_ui = pygame.font.Font(caminho_fonte, 24)
         fonte_pequena = pygame.font.Font(caminho_fonte, 18)
+        fonte_controles_titulo = pygame.font.Font(caminho_fonte, 25)
+        fonte_controles_subtitulo = pygame.font.Font(caminho_fonte, 14)
+        fonte_controles_tecla = pygame.font.Font(caminho_fonte, 16)
+        fonte_controles_descricao = pygame.font.Font(caminho_fonte, 14)
+        fonte_interrogacao = pygame.font.Font(caminho_fonte, 16)
+        fonte_botao = pygame.font.Font(caminho_fonte, 22)
+        for tamanho in range(22, 11, -1):
+            fonte_teste = pygame.font.Font(caminho_fonte, tamanho)
+            texto_teste = fonte_teste.render("RECOMEÇAR", True, (255, 255, 255))
+            if (
+                texto_teste.get_width() <= int(start_img.get_width() * 0.72)
+                and texto_teste.get_height() <= int(start_img.get_height() * 0.50)
+            ):
+                fonte_botao = fonte_teste
+                break
     except (pygame.error, FileNotFoundError):
         fonte_titulo = pygame.font.SysFont(None, 64)
         fonte_ui = pygame.font.SysFont(None, 36)
         fonte_pequena = pygame.font.SysFont(None, 24)
+        fonte_controles_titulo = pygame.font.SysFont(None, 25)
+        fonte_controles_subtitulo = pygame.font.SysFont(None, 14)
+        fonte_controles_tecla = pygame.font.SysFont(None, 16)
+        fonte_controles_descricao = pygame.font.SysFont(None, 14)
+        fonte_interrogacao = pygame.font.SysFont(None, 16)
+        fonte_botao = pygame.font.SysFont(None, 16)
 
     space = pymunk.Space()
     space.gravity = (0, 900)
@@ -572,6 +592,8 @@ def main():
     estado_jogo = "MENU"
     posicao_y_botao = HEIGHT - 290
     start_rect = start_img.get_rect(center=(WIDTH // 2, posicao_y_botao))
+    ajuda_rect = pygame.Rect(WIDTH - 58, 24, 36, 36)
+    voltar_rect = start_img.get_rect(center=(WIDTH // 2, posicao_y_botao))
 
     def desenhar_painel(surface, fundo_img, rect_pos, icone, texto_str):
         surface.blit(fundo_img, rect_pos)
@@ -590,48 +612,13 @@ def main():
              rect_pos.centery - texto_render.get_height() // 2),
         )
 
-    fontes_botao_cache = {}
-
     def renderizar_texto_botao(texto, largura_botao, altura_botao):
-
-        largura_maxima = int(largura_botao * 0.68)
-        altura_maxima = int(altura_botao * 0.46)
-
-        for tamanho in range(26, 11, -1):
-            if tamanho not in fontes_botao_cache:
-                try:
-                    fontes_botao_cache[tamanho] = pygame.font.Font(
-                        caminho_fonte, tamanho
-                    )
-                except (pygame.error, FileNotFoundError):
-                    fontes_botao_cache[tamanho] = pygame.font.SysFont(
-                        None, tamanho
-                    )
-
-            fonte = fontes_botao_cache[tamanho]
-            texto_render = fonte.render(texto, True, (255, 255, 255))
-
-            if (
-                texto_render.get_width() <= largura_maxima
-                and texto_render.get_height() <= altura_maxima
-            ):
-                return texto_render
-
-        fonte_minima = fontes_botao_cache.get(12)
-        if fonte_minima is None:
-            try:
-                fonte_minima = pygame.font.Font(caminho_fonte, 12)
-            except (pygame.error, FileNotFoundError):
-                fonte_minima = pygame.font.SysFont(None, 12)
-            fontes_botao_cache[12] = fonte_minima
-
-        return fonte_minima.render(texto, True, (255, 255, 255))
+        return fonte_botao.render(texto, True, (255, 255, 255))
 
     def desenhar_botao_principal(surface, texto, pos_mouse):
         sobre_botao = start_rect.inflate(18, 20).collidepoint(pos_mouse)
 
         if sobre_botao:
-
             tempo = pygame.time.get_ticks()
             pequeno_salto = int(math.sin(tempo * 0.018) * 2)
             centro = (WIDTH // 2, posicao_y_botao - 7 + pequeno_salto)
@@ -650,6 +637,103 @@ def main():
             texto_render,
             texto_render.get_rect(center=rect_visual.center)
         )
+
+    def desenhar_botao_ajuda(surface, pos_mouse):
+        sobre_botao = ajuda_rect.collidepoint(pos_mouse)
+        centro = ajuda_rect.center
+        raio = 19 if sobre_botao else 17
+        cor_borda = (255, 165, 35) if sobre_botao else (0, 191, 255)
+
+        pygame.draw.circle(surface, (8, 12, 35), centro, raio + 4)
+        pygame.draw.circle(surface, cor_borda, centro, raio, 3)
+        pygame.draw.circle(surface, (24, 30, 63), centro, raio - 3)
+
+        texto = fonte_interrogacao.render("?", True, (255, 255, 255))
+        surface.blit(texto, texto.get_rect(center=centro).move(0, -1))
+
+    def desenhar_botao_voltar(surface, pos_mouse):
+        sobre_botao = voltar_rect.inflate(18, 20).collidepoint(pos_mouse)
+
+        if sobre_botao:
+            tempo = pygame.time.get_ticks()
+            pequeno_salto = int(math.sin(tempo * 0.018) * 2)
+            centro = (WIDTH // 2, voltar_rect.centery - 7 + pequeno_salto)
+            imagem = start_hover
+        else:
+            centro = voltar_rect.center
+            imagem = start_img
+
+        rect_visual = imagem.get_rect(center=centro)
+        surface.blit(imagem, rect_visual)
+        texto_render = renderizar_texto_botao(
+            "VOLTAR", rect_visual.width, rect_visual.height
+        )
+        surface.blit(
+            texto_render,
+            texto_render.get_rect(center=rect_visual.center)
+        )
+
+    def desenhar_tela_controles(surface, pos_mouse):
+        surface.blit(tela_inicial_img, (0, 0))
+        desenhar_particulas_lava(surface, particulas_lava)
+
+        painel = pygame.Surface((510, 390), pygame.SRCALPHA)
+        pygame.draw.rect(
+            painel, (9, 13, 39, 235), painel.get_rect(), border_radius=22
+        )
+        pygame.draw.rect(
+            painel, (0, 191, 255, 230), painel.get_rect(),
+            width=3, border_radius=22
+        )
+        surface.blit(painel, (45, 50))
+
+        titulo = fonte_controles_titulo.render(
+            "COMO JOGAR", True, (130, 230, 255)
+        )
+        surface.blit(titulo, titulo.get_rect(center=(WIDTH // 2, 94)))
+
+        subtitulo = fonte_controles_subtitulo.render(
+            "CONTROLES DA PARTIDA", True, (255, 180, 55)
+        )
+        surface.blit(subtitulo, subtitulo.get_rect(center=(WIDTH // 2, 134)))
+
+        controles = [
+            ("← / →", "Mover para os lados"),
+            ("↑", "Aplicar impulso para cima"),
+            ("ESPAÇO / ENTER", "Iniciar ou recomeçar a partida"),
+            ("MOUSE", "Clicar nos botões da tela"),
+            ("ESC", "Voltar ao menu ou sair do jogo"),
+        ]
+
+        y = 155
+        for indice, (tecla, descricao) in enumerate(controles):
+            texto_tecla = fonte_controles_tecla.render(
+                tecla, True, (130, 230, 255)
+            )
+            texto_descricao = fonte_controles_descricao.render(
+                descricao, True, (255, 255, 255)
+            )
+            surface.blit(
+                texto_tecla,
+                texto_tecla.get_rect(center=(WIDTH // 2, y + 8))
+            )
+            surface.blit(
+                texto_descricao,
+                texto_descricao.get_rect(center=(WIDTH // 2, y + 28))
+            )
+
+            if indice < len(controles) - 1:
+                pygame.draw.line(
+                    surface,
+                    (255, 145, 35),
+                    (90, y + 45),
+                    (500, y + 45),
+                    1
+                )
+
+            y += 57
+
+        desenhar_botao_voltar(surface, pos_mouse)
 
     espaco_estava_pressionado = False
     impulso_pendente = False
@@ -693,21 +777,39 @@ def main():
                 sys.exit()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if estado_jogo in ("MENU", "GAME_OVER"):
-
+                if estado_jogo == "MENU" and ajuda_rect.collidepoint(event.pos):
+                    estado_jogo = "CONTROLES"
+                elif estado_jogo == "CONTROLES":
+                    if voltar_rect.inflate(18, 20).collidepoint(event.pos):
+                        estado_jogo = "MENU"
+                elif estado_jogo in ("MENU", "GAME_OVER"):
                     if start_rect.inflate(18, 20).collidepoint(event.pos):
                         iniciar_partida()
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
+                    if estado_jogo == "CONTROLES":
+                        estado_jogo = "MENU"
+                    else:
+                        pygame.quit()
+                        sys.exit()
+
+                elif event.key in (pygame.K_F1, pygame.K_h):
+                    if estado_jogo == "MENU":
+                        estado_jogo = "CONTROLES"
+                    elif estado_jogo == "CONTROLES":
+                        estado_jogo = "MENU"
 
                 elif event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_KP_ENTER):
                     if estado_jogo in ("MENU", "GAME_OVER"):
                         iniciar_partida()
 
-                elif event.key == pygame.K_UP and estado_jogo == "JOGANDO":
+                elif (
+                    event.key == pygame.K_UP
+                    and estado_jogo == "JOGANDO"
+                    and impulso_protecao_frames == 0
+                    and not impulso_pendente
+                ):
                     impulso_pendente = True
 
         teclas_atuais = pygame.key.get_pressed()
@@ -739,14 +841,18 @@ def main():
             if impulso_pendente:
                 ball_body.activate()
                 vx, vy = ball_body.velocity
-                ball_body.velocity = (vx, min(vy, -IMPULSO_VERTICAL))
+                ball_body.velocity = (vx, -IMPULSO_VERTICAL)
                 impulso_pendente = False
-                impulso_protecao_frames = IMPULSO_PROTECAO_FRAMES
+                impulso_protecao_frames = INTERVALO_IMPULSO_FRAMES
             elif impulso_protecao_frames > 0:
-                ball_body.activate()
-                vx, vy = ball_body.velocity
-                ball_body.velocity = (vx, min(vy, -IMPULSO_VERTICAL))
                 impulso_protecao_frames -= 1
+
+            limite_teto = ball_shape.radius + 8
+            if ball_body.position.y < limite_teto:
+                ball_body.position = (ball_body.position.x, limite_teto)
+                vx, vy = ball_body.velocity
+                ball_body.velocity = (vx, max(0, vy))
+                space.reindex_shapes_for_body(ball_body)
 
             atualizar_rastro_bolinha(
                 rastro_bolinha, ball_body.position, dt
@@ -776,10 +882,12 @@ def main():
 
         if estado_jogo == "MENU":
             screen.blit(tela_inicial_img, (0, 0))
-
             desenhar_particulas_lava(screen, particulas_lava)
-
             desenhar_botao_principal(screen, "JOGAR", pos_mouse)
+            desenhar_botao_ajuda(screen, pos_mouse)
+
+        elif estado_jogo == "CONTROLES":
+            desenhar_tela_controles(screen, pos_mouse)
 
         elif estado_jogo == "JOGANDO":
             screen.blit(bg_image, (0, 0))
